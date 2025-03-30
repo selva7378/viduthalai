@@ -56,4 +56,16 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    //adaptive library
+    implementation(libs.androidx.material3.adaptive)
+    implementation(libs.androidx.material3.adaptive.layout)
+    implementation(libs.androidx.material3.adaptive.navigation)
+    implementation(libs.androidx.material3.adaptive.navigation.suite)
+
+    // DataStore
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+// Optional - For coroutines support
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 }
