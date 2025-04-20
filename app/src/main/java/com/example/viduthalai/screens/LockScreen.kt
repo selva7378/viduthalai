@@ -5,6 +5,7 @@ import android.app.admin.DeviceAdminReceiver
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.example.viduthalai.TimerActivity
 import java.util.Calendar
 
 // Define your allowed packages
@@ -30,27 +32,21 @@ private val ALLOWED_PACKAGES = arrayOf("com.example.viduthalai", "com.example.pl
 
 @Composable
 fun LockScreen(modifier: Modifier = Modifier) {
-    var showTimerScreen by remember { mutableStateOf(false) }
-    var selectedHours by remember { mutableStateOf(0) }
-    var selectedMinutes by remember { mutableStateOf(0) }
+    val context = LocalContext.current
 
-    if (showTimerScreen) {
-        TimerScreen(
-            hours = selectedHours,
-            minutes = selectedMinutes,
-            modifier = modifier
-        )
-    } else {
-        DialExample(
-            onConfirm = { hours, minutes ->
-                selectedHours = hours
-                selectedMinutes = minutes
-                showTimerScreen = true
-            },
-            onDismiss = { /* Handle dismiss if needed */ },
-            modifier = modifier.fillMaxSize()
-        )
-    }
+    DialExample(
+        onConfirm = { hours, minutes ->
+            // Launch TimerActivity as a separate activity
+            Intent(context, TimerActivity::class.java).apply {
+                putExtra("hours", hours)
+                putExtra("minutes", minutes)
+//                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                context.startActivity(this)
+            }
+        },
+        onDismiss = { /* Handle dismiss if needed */ },
+        modifier = modifier.fillMaxSize()
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

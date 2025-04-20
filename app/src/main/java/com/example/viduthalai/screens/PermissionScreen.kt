@@ -1,10 +1,10 @@
 package com.example.viduthalai.screens
 
-import android.Manifest
 import android.app.Activity
 import android.app.AlarmManager
 import android.app.AppOpsManager
-import android.app.usage.UsageStatsManager
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -14,6 +14,7 @@ import android.os.Process
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -36,55 +37,61 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.core.app.ActivityCompat
 import androidx.core.app.AlarmManagerCompat.canScheduleExactAlarms
 import androidx.core.content.ContextCompat
+import com.example.viduthalai.receiver.MyDeviceAdminReceiver
 
 @Composable
-fun PermissionScreen(modifier: Modifier = Modifier, onAllPermissionsGranted: () -> Unit) {
+fun PermissionScreen(
+    modifier: Modifier = Modifier,
+    onAllPermissionsGranted: () -> Unit
+) {
     val context = LocalContext.current
     val activity = context as? Activity
     val packageName = context.packageName
 
     // Permission states
     var hasOverlayPermission by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
-    var hasUsageAccess by remember {
+    var hasUsageAccess by remember { mutableStateOf(checkUsageAccess(context)) }
+
+    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+    var hasAlarmPermission by remember { mutableStateOf(canScheduleExactAlarms(alarmManager!!)) }
+
+    var hasAdminRights by remember { mutableStateOf(isDeviceAdminActive(context)) }
+
+    var hasNotificationPermission by remember {
         mutableStateOf(
-            checkUsageAccess(context)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            } else true
         )
     }
-    val alarmManager =
-        context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
-    var hasAlarmPermission by remember {
-        mutableStateOf(
 
-            canScheduleExactAlarms(alarmManager!!)
-        )
-    }
-
-    // Check if all permissions are granted
-    val allPermissionsGranted = hasOverlayPermission && hasUsageAccess && hasAlarmPermission
-
-    // For handling permission requests
+    // Launchers
     val overlayLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        hasOverlayPermission = Settings.canDrawOverlays(context)
-    }
+    ) { hasOverlayPermission = Settings.canDrawOverlays(context) }
 
     val usageAccessLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        hasUsageAccess = checkUsageAccess(context)
-    }
+    ) { hasUsageAccess = checkUsageAccess(context) }
 
-    // Launcher for alarm permission (Android 12+)
     val alarmPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) { isGranted ->
-        // Check permission state when returning from settings
-        hasAlarmPermission = canScheduleExactAlarms(alarmManager!!)
-    }
+    ) { hasAlarmPermission = canScheduleExactAlarms(alarmManager!!) }
+
+    val adminLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { hasAdminRights = isDeviceAdminActive(context) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> hasNotificationPermission = granted }
+
+    val allPermissionsGranted = hasOverlayPermission && hasUsageAccess && hasAlarmPermission && hasAdminRights
 
     Column(
         modifier = modifier
@@ -98,61 +105,61 @@ fun PermissionScreen(modifier: Modifier = Modifier, onAllPermissionsGranted: () 
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        // Display Over Other Apps
         PermissionItem(
             name = "Display Over Other Apps",
             description = "Allows app to show content over other apps",
             isGranted = hasOverlayPermission,
             onToggle = {
-                if (!hasOverlayPermission) {
-                    val intent = Intent(
-                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        Uri.parse("package:$packageName")
-                    )
-                    overlayLauncher.launch(intent)
-                } else {
-                    // Can't revoke programmatically - must go to settings
-                    Toast.makeText(context, "Please disable in system settings", Toast.LENGTH_SHORT).show()
-                }
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:$packageName")
+                )
+                overlayLauncher.launch(intent)
             }
         )
 
-        // Usage Access
         PermissionItem(
             name = "Usage Access",
             description = "Allows app to detect app usage",
             isGranted = hasUsageAccess,
             onToggle = {
-                if (!hasUsageAccess) {
-                    val intent = Intent(
-                        Settings.ACTION_USAGE_ACCESS_SETTINGS,
-                        Uri.parse("package:$packageName")
-                    )
-                    usageAccessLauncher.launch(intent)
-                } else {
-                    // Can't revoke programmatically
-                    Toast.makeText(context, "Please disable in system settings", Toast.LENGTH_SHORT).show()
-                }
+                val intent = Intent(
+                    Settings.ACTION_USAGE_ACCESS_SETTINGS,
+                    Uri.parse("package:$packageName")
+                )
+                usageAccessLauncher.launch(intent)
             }
         )
 
-        // Alarm Permission (Android 12+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             PermissionItem(
                 name = "Exact Alarms",
                 description = "Allows precise alarm scheduling",
                 isGranted = hasAlarmPermission,
                 onToggle = {
-                    if (!hasAlarmPermission) {
-                        // Request the permission directly
-                        val intent = Intent(
-                            Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                            Uri.parse("package:$packageName")
-                        )
-                        alarmPermissionLauncher.launch(intent)
-                    } else {
-                        Toast.makeText(context, "Please disable in system settings", Toast.LENGTH_SHORT).show()
-                    }
+                    val intent = Intent(
+                        Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                        Uri.parse("package:$packageName")
+                    )
+                    alarmPermissionLauncher.launch(intent)
+                }
+            )
+        }
+
+        PermissionItem(
+            name = "Device Administrator",
+            description = "Required for security features",
+            isGranted = hasAdminRights,
+            onToggle = { handleAdminPermission(context, adminLauncher) }
+        )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            PermissionItem(
+                name = "Notification",
+                description = "Required to send notifications",
+                isGranted = hasNotificationPermission,
+                onToggle = {
+                    notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
                 }
             )
         }
@@ -170,6 +177,7 @@ fun PermissionScreen(modifier: Modifier = Modifier, onAllPermissionsGranted: () 
         }
     }
 }
+
 
 @Composable
 fun PermissionItem(
@@ -218,6 +226,27 @@ fun checkUsageAccess(context: Context): Boolean {
             context.packageName
         ) == AppOpsManager.MODE_ALLOWED
     }
+}
+
+private fun handleAdminPermission(context: Context, launcher: ActivityResultLauncher<Intent>) {
+    val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+    val adminComponent = ComponentName(context, MyDeviceAdminReceiver::class.java)
+
+    if (!dpm.isAdminActive(adminComponent)) {
+        launcher.launch(Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+            putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
+            putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                "Required for security features")
+        })
+    } else {
+        Toast.makeText(context, "Disable in device admin settings", Toast.LENGTH_SHORT).show()
+    }
+}
+
+
+private fun isDeviceAdminActive(context: Context): Boolean {
+    val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+    return dpm.isAdminActive(ComponentName(context, MyDeviceAdminReceiver::class.java))
 }
 
 // Constants

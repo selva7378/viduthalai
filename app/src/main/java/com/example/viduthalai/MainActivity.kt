@@ -11,9 +11,13 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -23,6 +27,7 @@ import com.example.viduthalai.navgraph.ViduthalaiDestination
 import com.example.viduthalai.ui.theme.ViduthalaiTheme
 import com.example.viduthalai.navgraph.ViduthalaiNavigationWrapperUI
 import com.example.viduthalai.screens.PermissionScreen
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -42,24 +47,29 @@ fun Viduthalai(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Observe first launch state using your existing DataStoreHelper
-    val isFirstLaunch by produceState<Boolean?>(initialValue = null) {
-        value = DataStoreHelper.isFirstLaunch(context)
+
+    // Track first launch state
+    var isFirstLaunch by remember { mutableStateOf<Boolean?>(null) }
+
+    // Observe first launch state asynchronously
+    LaunchedEffect(Unit) {
+        isFirstLaunch = DataStoreHelper.isFirstLaunch(context)
     }
 
-    // Handle loading/ready states
     when (isFirstLaunch) {
         true -> PermissionScreen(
             onAllPermissionsGranted = {
                 scope.launch {
                     DataStoreHelper.setFirstLaunchCompleted(context)
+                    isFirstLaunch = false // Update state to navigate to main screen
                 }
             }
         )
         false -> ViduthalaiNavigationWrapperUI()
-        null -> FullScreenLoader() // Optional loading state
+        null -> FullScreenLoader() // Show a loading state while checking first launch
     }
 }
+
 
 // Optional loading component
 @Composable

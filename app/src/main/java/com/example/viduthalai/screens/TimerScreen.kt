@@ -1,6 +1,13 @@
 package com.example.viduthalai.screens
 
 import android.app.Activity
+import android.app.ActivityManager
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.Build
+import android.os.IBinder
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,57 +26,113 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.viduthalai.datastore.DataStoreHelper
+import com.example.viduthalai.service.TimerService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-fun TimerScreen(hours: Int, minutes: Int, modifier: Modifier = Modifier) {
-    CircularCountdownTimer(hours = hours, minutes = minutes)
-}
-
-@Composable
-fun CircularCountdownTimer(hours: Int, minutes: Int) {
-    val context = LocalContext.current
+fun TimerScreen(
+    hours: Int,
+    minutes: Int,
+    onTimerFinished: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
     val totalTimeMillis = (hours * 60L * 60L * 1000L) + (minutes * 60L * 1000L)
-    var remainingTimeMillis by remember { mutableStateOf(totalTimeMillis) }
+    var remainingTimeMillis by remember {
+
+        mutableStateOf(totalTimeMillis)
+    }
     val progress = remainingTimeMillis.toFloat() / totalTimeMillis
-    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    // Create a reference that will be initialized later
+    lateinit var serviceConnection: ServiceConnection
+
+    serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            (service as? TimerService.LocalBinder)?.setUpdateCallback { newRemaining ->
+                remainingTimeMillis = newRemaining
+
+                if (newRemaining <= 0L) {
+                    onTimerFinished()
+                    // Unbind and stop the service safely when timer ends
+                    try {
+                        context.unbindService(serviceConnection)
+                        context.stopService(Intent(context, TimerService::class.java))
+                    } catch (e: Exception) {
+                        e.printStackTrace() // Optional: log it
+                    }
+                }
+            }
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {}
+    }
 
     LaunchedEffect(Unit) {
-        scope.launch {
-            while (remainingTimeMillis > 0) {
-                delay(1000)
-                remainingTimeMillis -= 1000
-            }
-            // Exit lock task when timer ends
-            (context as Activity).stopLockTask()
+        val isRestore = DataStoreHelper.isRestore(context)
+        if (isRestore) {
+            val (_, restoredRemaining) = DataStoreHelper.getTimerState(context)
+            remainingTimeMillis = restoredRemaining
         }
+        val serviceIntent = Intent(context, TimerService::class.java).apply {
+            putExtra(TimerService.EXTRA_TOTAL_TIME, totalTimeMillis)
+            putExtra(TimerService.EXTRA_REMAINING_TIME, remainingTimeMillis)
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(serviceIntent)
+        } else {
+            context.startService(serviceIntent)
+        }
+
+        context.bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
     }
 
     Column(
+        modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize()
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         CircularProgressIndicator(
             progress = { progress },
-            modifier = Modifier.size(150.dp),
-            strokeWidth = 8.dp
+            modifier = Modifier.size(200.dp)
         )
-
-        Text(
-            text = formatTime(remainingTimeMillis),
-            style = MaterialTheme.typography.headlineMedium
-        )
+        Text(TimerService.formatTime(remainingTimeMillis))
     }
 }
 
-// Function to format time as HH:MM:SS
-fun formatTime(timeMillis: Long): String {
-    val totalSeconds = timeMillis / 1000
-    val hours = totalSeconds / 3600
-    val minutes = (totalSeconds % 3600) / 60
-    val seconds = totalSeconds % 60
-    return String.format("%02d:%02d:%02d", hours, minutes, seconds)
+
+@Preview(showBackground = true)
+@Composable
+fun TimerScreenPreview() {
+    // You can customize the preview with different time values
+    TimerScreen(
+        hours = 1,
+        minutes = 30,
+        modifier = Modifier.fillMaxSize()
+    )
+}
+
+@Preview(showBackground = true, name = "Short Timer")
+@Composable
+fun ShortTimerScreenPreview() {
+    TimerScreen(
+        hours = 0,
+        minutes = 5,
+        modifier = Modifier.fillMaxSize()
+    )
+}
+
+@Preview(showBackground = true, name = "Long Timer", backgroundColor = 0xFF000000)
+@Composable
+fun LongTimerScreenPreview() {
+    TimerScreen(
+        hours = 2,
+        minutes = 45,
+        modifier = Modifier.fillMaxSize()
+    )
 }
