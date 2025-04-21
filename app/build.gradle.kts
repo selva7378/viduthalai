@@ -5,14 +5,14 @@ plugins {
 }
 
 android {
-    namespace = "com.example.viduthalai"
+    namespace = "com.selvaganesh7378.viduthalai"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.viduthalai"
+        applicationId = "com.selvaganesh7378.viduthalai"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
+        versionCode = 3
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -49,6 +49,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.work.runtime.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

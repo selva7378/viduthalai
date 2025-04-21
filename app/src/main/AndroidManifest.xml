@@ -65,6 +65,7 @@
         <!-- Added TimerActivity -->
         <activity
             android:name=".TimerActivity"
+            android:parentActivityName=".MainActivity"
             android:exported="true"
             android:theme="@style/Theme.Viduthalai"
             android:configChanges="keyboardHidden|orientation|screenSize">
