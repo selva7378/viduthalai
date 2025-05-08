@@ -2,16 +2,10 @@ package com.selvaganesh7378.viduthalai.screens.permission
 
 import android.Manifest
 import android.app.Activity
-import android.app.AlarmManager
-import android.app.AppOpsManager
-import android.app.admin.DevicePolicyManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.os.Process
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -24,23 +18,26 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.core.app.AlarmManagerCompat.canScheduleExactAlarms
-import androidx.core.content.ContextCompat
-import com.selvaganesh7378.viduthalai.receiver.MyDeviceAdminReceiver
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun PermissionScreen(
@@ -48,55 +45,41 @@ fun PermissionScreen(
     onAllPermissionsGranted: () -> Unit
 ) {
     val context = LocalContext.current
-    val activity = context as? Activity
-    val packageName = context.packageName
+    val viewModel: PermissionViewModel = hiltViewModel()
 
-    // Permission states
-    var hasOverlayPermission by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
-    var hasUsageAccess by remember { mutableStateOf(checkUsageAccess(context)) }
-
-    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
-    var hasAlarmPermission by remember { mutableStateOf(canScheduleExactAlarms(alarmManager!!)) }
-
-    var hasAdminRights by remember { mutableStateOf(isDeviceAdminActive(context)) }
-
-    var hasNotificationPermission by remember {
-        mutableStateOf(
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                ContextCompat.checkSelfPermission(
-                    context,
-                    android.Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-            } else true
-        )
+    // Check permissions when screen is first displayed
+    LaunchedEffect(Unit) {
+        viewModel.checkAllPermissions(context)
     }
 
     // Launchers
     val overlayLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) { hasOverlayPermission = Settings.canDrawOverlays(context) }
+    ) { viewModel.checkAllPermissions(context) }
 
     val usageAccessLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) { hasUsageAccess = checkUsageAccess(context) }
+    ) { viewModel.checkAllPermissions(context) }
 
     val alarmPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) { hasAlarmPermission = canScheduleExactAlarms(alarmManager!!) }
+    ) { viewModel.checkAllPermissions(context) }
 
     val adminLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) { hasAdminRights = isDeviceAdminActive(context) }
+    ) { viewModel.checkAllPermissions(context) }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { granted -> hasNotificationPermission = granted }
-
-    val allPermissionsGranted = hasOverlayPermission && hasUsageAccess && hasAlarmPermission && hasAdminRights
+    ) { granted ->
+        viewModel.hasNotificationPermission = granted
+    }
 
     Column(
         modifier = modifier
             .fillMaxSize()
+            .statusBarsPadding()  // Add status bar padding
+            .navigationBarsPadding()  // Add navigation bar padding
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -107,61 +90,41 @@ fun PermissionScreen(
         )
 
         PermissionItem(
-            name = "Display Over Other Apps",
+            name = "Grant overlay permission",
             description = "Allows app to show content over other apps",
-            isGranted = hasOverlayPermission,
-            onToggle = {
-                val intent = Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:$packageName")
-                )
-                overlayLauncher.launch(intent)
-            }
+            isGranted = viewModel.hasOverlayPermission,
+            onToggle = { viewModel.requestOverlayPermission(context, overlayLauncher) }
         )
 
         PermissionItem(
             name = "Usage Access",
             description = "Allows app to detect app usage",
-            isGranted = hasUsageAccess,
-            onToggle = {
-                val intent = Intent(
-                    Settings.ACTION_USAGE_ACCESS_SETTINGS,
-                    Uri.parse("package:$packageName")
-                )
-                usageAccessLauncher.launch(intent)
-            }
+            isGranted = viewModel.hasUsageAccess,
+            onToggle = { viewModel.requestUsageAccessPermission(context, usageAccessLauncher) }
         )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             PermissionItem(
-                name = "Exact Alarms",
+                name = "Grant Exact Alarms Permission",
                 description = "Allows precise alarm scheduling",
-                isGranted = hasAlarmPermission,
-                onToggle = {
-                    val intent = Intent(
-                        Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                        Uri.parse("package:$packageName")
-                    )
-                    alarmPermissionLauncher.launch(intent)
-                }
+                isGranted = viewModel.hasAlarmPermission,
+                onToggle = { viewModel.requestAlarmPermission(context, alarmPermissionLauncher) }
             )
         }
 
         PermissionItem(
-            name = "Device Administrator",
+            name = "Grant Device Administrator",
             description = "Required for security features",
-            isGranted = hasAdminRights,
-            onToggle = { handleAdminPermission(context, adminLauncher) }
+            isGranted = viewModel.hasAdminRights,
+            onToggle = { viewModel.requestAdminPermission(context, adminLauncher) }
         )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             PermissionItem(
                 name = "Notification",
                 description = "Required to send notifications",
-                isGranted = hasNotificationPermission,
-                onToggle = {
-                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
+                isGranted = viewModel.hasNotificationPermission,
+                onToggle = { viewModel.requestNotificationPermission(notificationPermissionLauncher) }
             )
         }
 
@@ -172,13 +135,12 @@ fun PermissionScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
-            enabled = allPermissionsGranted
+            enabled = viewModel.allPermissionsGranted()
         ) {
             Text("Continue")
         }
     }
 }
-
 
 @Composable
 fun PermissionItem(
@@ -187,68 +149,42 @@ fun PermissionItem(
     isGranted: Boolean,
     onToggle: () -> Unit
 ) {
-    Row(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(20.dp)
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(name, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(name, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            }
+
+            Switch(
+                checked = isGranted,
+                onCheckedChange = { onToggle() },
+                modifier = Modifier.padding(start = 16.dp)
             )
         }
-
-        Switch(
-            checked = isGranted,
-            onCheckedChange = { onToggle() },
-            modifier = Modifier.padding(start = 16.dp)
-        )
-    }
-}
-
-fun checkUsageAccess(context: Context): Boolean {
-    val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        appOps.unsafeCheckOp(
-            AppOpsManager.OPSTR_GET_USAGE_STATS,
-            Process.myUid(),
-            context.packageName
-        ) == AppOpsManager.MODE_ALLOWED
-    } else {
-        @Suppress("DEPRECATION")
-        appOps.checkOpNoThrow(
-            "android:get_usage_stats",
-            Process.myUid(),
-            context.packageName
-        ) == AppOpsManager.MODE_ALLOWED
-    }
-}
-
-private fun handleAdminPermission(context: Context, launcher: ActivityResultLauncher<Intent>) {
-    val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-    val adminComponent = ComponentName(context, MyDeviceAdminReceiver::class.java)
-
-    if (!dpm.isAdminActive(adminComponent)) {
-        launcher.launch(Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
-            putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
-            putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-                "Required for security features")
-        })
-    } else {
-        Toast.makeText(context, "Disable in device admin settings", Toast.LENGTH_SHORT).show()
     }
 }
 
 
-private fun isDeviceAdminActive(context: Context): Boolean {
-    val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-    return dpm.isAdminActive(ComponentName(context, MyDeviceAdminReceiver::class.java))
-}
+@Preview
+@Composable
+fun PermissionScreenPreview() {
+    PermissionScreen(onAllPermissionsGranted = {})
 
-// Constants
-private const val REQUEST_CODE_ALARM_PERMISSION = 1001
+}

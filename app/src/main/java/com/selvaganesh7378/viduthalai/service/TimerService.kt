@@ -107,7 +107,7 @@ class TimerService : Service() {
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle("Focus Timer Active")
             .setContentText("Time remaining: ${formatTime(remainingMillis)}")
-            .setSmallIcon(R.drawable.running_icon)
+            .setSmallIcon(R.drawable.freedom_chain)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setProgress(100, progress, false)
             .setOngoing(true)

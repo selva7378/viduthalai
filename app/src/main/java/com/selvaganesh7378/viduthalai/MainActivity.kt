@@ -19,11 +19,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import com.selvaganesh7378.viduthalai.datastore.DataStoreHelper
+import com.selvaganesh7378.viduthalai.model.onboardingPages
 import com.selvaganesh7378.viduthalai.ui.theme.ViduthalaiTheme
 import com.selvaganesh7378.viduthalai.navgraph.ViduthalaiNavigationWrapperUI
+import com.selvaganesh7378.viduthalai.screens.onboarding.OnBoardingScreen
 import com.selvaganesh7378.viduthalai.screens.permission.PermissionScreen
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,8 +55,17 @@ fun Viduthalai(modifier: Modifier = Modifier) {
     }
 
     when (isFirstLaunch) {
-        true -> PermissionScreen(
-            onAllPermissionsGranted = {
+//        true -> PermissionScreen(
+//            onAllPermissionsGranted = {
+//                scope.launch {
+//                    DataStoreHelper.setFirstLaunchCompleted(context)
+//                    isFirstLaunch = false // Update state to navigate to main screen
+//                }
+//            }
+//        )
+        true -> OnBoardingScreen(
+            onboardingPages,
+            onAgree = {
                 scope.launch {
                     DataStoreHelper.setFirstLaunchCompleted(context)
                     isFirstLaunch = false // Update state to navigate to main screen
