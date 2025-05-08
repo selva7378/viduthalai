@@ -7,29 +7,31 @@ import com.selvaganesh7378.viduthalai.R
 data class OnboardingPage(
     val title: String,
     val description: String,
-    @DrawableRes val imageRes: Int
+    val lottieRes: Int // use raw resource (e.g., R.raw.animation)
 )
+
 
 val onboardingPages = listOf(
     OnboardingPage(
-        title = "Welcome to FocusLock",
-        description = "Experience a digital detox by locking your device and reclaiming your time.",
-        imageRes = R.drawable.demo_img
+        title = "Welcome to Viduthalai",
+        description = "Experience a Viduthalai by locking your device and reclaiming your time.",
+        lottieRes = R.raw.viduthalai
     ),
     OnboardingPage(
         title = "Customize Your Access",
         description = "Whitelist essential apps to stay connected while minimizing distractions.",
-        imageRes = R.drawable.demo_img
+        lottieRes = R.raw.usage_access
     ),
     OnboardingPage(
         title = "Schedule Your Detox",
         description = "Plan your focus sessions ahead of time to build consistent habits.",
-        imageRes = R.drawable.demo_img
+        lottieRes = R.raw.schedule
     ),
     OnboardingPage(
         title = "Your Privacy Matters",
         description = "We prioritize your privacy. All data stays on your device and is never shared.",
-        imageRes = R.drawable.demo_img
+        lottieRes = R.raw.privacy
     )
 )
+
 

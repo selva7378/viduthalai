@@ -27,6 +27,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,36 +41,30 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import com.selvaganesh7378.viduthalai.model.OnboardingPage
 import kotlin.math.absoluteValue
+import com.airbnb.lottie.compose.*
+
 
 @Composable
 fun OnBoardingScreen(
     pages: List<OnboardingPage>,
-    onAgree : () -> Unit,
+    onAgree: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val pagerState = rememberPagerState { pages.size }
 
-    // Define gradient backgrounds for each page
     val gradients = listOf(
         Brush.verticalGradient(listOf(Color(0xFF6A11CB), Color(0xFF2575FC))),
         Brush.verticalGradient(listOf(Color(0xFF00B4DB), Color(0xFF0083B0))),
         Brush.verticalGradient(listOf(Color(0xFFFF5F6D), Color(0xFFFFC371))),
         Brush.verticalGradient(listOf(Color(0xFF43CEA2), Color(0xFF185A9D)))
-
     )
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-    ) {
+    Box(modifier = modifier.fillMaxSize()) {
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize()
         ) { page ->
-            val pageOffset = (
-                    (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
-                    ).absoluteValue
-
+            val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction).absoluteValue
             val onboardingPage = pages[page]
 
             Box(
@@ -99,19 +94,22 @@ fun OnBoardingScreen(
                             .fillMaxSize()
                             .padding(24.dp)
                     ) {
-                        // Centered content
                         Column(
                             modifier = Modifier.align(Alignment.Center),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Image(
-                                painter = painterResource(id = onboardingPage.imageRes),
-                                contentDescription = onboardingPage.title,
+                            // Lottie animation
+                            val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(onboardingPage.lottieRes))
+                            val progress by animateLottieCompositionAsState(composition, iterations = LottieConstants.IterateForever)
+
+                            LottieAnimation(
+                                composition = composition,
+                                progress = { progress },
                                 modifier = Modifier
                                     .height(200.dp)
-                                    .clip(RoundedCornerShape(12.dp))
                                     .padding(bottom = 24.dp)
                             )
+
                             Text(
                                 text = onboardingPage.title,
                                 style = MaterialTheme.typography.headlineMedium,
@@ -126,24 +124,20 @@ fun OnBoardingScreen(
                             )
                         }
 
-                        // "Agree" button at bottom-end
                         if (page == pages.lastIndex) {
                             Button(
                                 onClick = onAgree,
-                                modifier = Modifier
-                                    .align(Alignment.BottomEnd)
+                                modifier = Modifier.align(Alignment.BottomEnd)
                             ) {
                                 Text("Agree")
                             }
                         }
                     }
-
-
                 }
             }
         }
 
-        // Page Indicator
+        // Page indicator
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -163,6 +157,7 @@ fun OnBoardingScreen(
         }
     }
 }
+
 
 
 

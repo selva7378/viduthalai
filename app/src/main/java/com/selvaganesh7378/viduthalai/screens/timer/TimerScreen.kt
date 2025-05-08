@@ -9,10 +9,14 @@ import android.os.IBinder
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,6 +30,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
+import com.selvaganesh7378.viduthalai.R
 import com.selvaganesh7378.viduthalai.datastore.DataStoreHelper
 import com.selvaganesh7378.viduthalai.service.TimerService
 import kotlinx.coroutines.CoroutineScope
@@ -39,16 +49,12 @@ fun TimerScreen(
     onTimerFinished: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Log.e("timer activity", " hours = ${hours} and minutes = ${minutes}")
     val totalTimeMillis = (hours * 60L * 60L * 1000L) + (minutes * 60L * 1000L)
-    var remainingTimeMillis by remember {
-
-        mutableStateOf(totalTimeMillis)
-    }
+    var remainingTimeMillis by remember { mutableStateOf(totalTimeMillis) }
+    var isCompleted by remember { mutableStateOf(false) }
     val progress = remainingTimeMillis.toFloat() / totalTimeMillis
     val context = LocalContext.current
 
-    // Create a reference that will be initialized later
     lateinit var serviceConnection: ServiceConnection
 
     serviceConnection = object : ServiceConnection {
@@ -56,41 +62,30 @@ fun TimerScreen(
             (service as? TimerService.LocalBinder)?.setUpdateCallback { newRemaining ->
                 remainingTimeMillis = newRemaining
 
-                if (newRemaining <= 0L) {
-                    // Launch a coroutine to handle suspend functions
+                if (newRemaining <= 0L && !isCompleted) {
+                    isCompleted = true
                     CoroutineScope(Dispatchers.Main).launch {
-                        try {
-                            // 1. Handle timer finished callback
-                            onTimerFinished()
-
-                            // 2. Clear DataStore state (suspend function)
-                            DataStoreHelper.setRestoreState(context, false)
-
-                            // 3. Clean up service
-                            context.unbindService(serviceConnection)
-                            context.stopService(Intent(context, TimerService::class.java))
-                        } catch (e: Exception) {
-                            Log.e("TimerService", "Cleanup error", e)
-                        }
+                        onTimerFinished()
+                        DataStoreHelper.setRestoreState(context, false)
+                        context.unbindService(serviceConnection)
+                        context.stopService(Intent(context, TimerService::class.java))
                     }
                 }
             }
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
-            // Handle unexpected service disconnection
             Log.w("TimerService", "Service unexpectedly disconnected")
         }
     }
 
     LaunchedEffect(Unit) {
         val isRestore = DataStoreHelper.isRestore(context)
-        Log.e("timer screen", "${DataStoreHelper.isRestore(context)}")
         if (isRestore) {
             val (_, restoredRemaining) = DataStoreHelper.getTimerState(context)
-
             remainingTimeMillis = restoredRemaining
-            if(remainingTimeMillis <= 0) {
+            if (restoredRemaining <= 0L) {
+                isCompleted = true
                 onTimerFinished()
             }
         }
@@ -109,19 +104,48 @@ fun TimerScreen(
     }
 
     Column(
-        modifier = modifier
-            .fillMaxSize(),
-//            .background(color = Color.Black),
+        modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        CircularProgressIndicator(
-            progress = { progress },
-            modifier = Modifier.size(200.dp)
-        )
-        Text(TimerService.formatTime(remainingTimeMillis))
+        if (isCompleted) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                // Fullscreen Lottie animation in background
+                val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.completed))
+                val progress by animateLottieCompositionAsState(
+                    composition = composition,
+                    iterations = LottieConstants.IterateForever
+                )
+
+                LottieAnimation(
+                    composition = composition,
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight()
+                        .align(Alignment.Center)
+                )
+
+                // "Completed" text on top of animation
+                Text(
+                    text = "Completed",
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
+        } else {
+            CircularProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.size(200.dp)
+            )
+            Text(TimerService.formatTime(remainingTimeMillis))
+        }
     }
 }
+
 
 
 @Preview(showBackground = true)

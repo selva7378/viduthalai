@@ -15,7 +15,7 @@ android {
         applicationId = "com.selvaganesh7378.viduthalai"
         minSdk = 24
         targetSdk = 35
-        versionCode = 4
+        versionCode = 6
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -78,6 +78,10 @@ dependencies {
     kapt("com.google.dagger:hilt-android-compiler:2.56.2")
 //    ksp("com.google.dagger:hilt-android-compiler:2.56.2")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+
+    // lottie
+    implementation("com.airbnb.android:lottie-compose:6.6.6")
+
 }
 
 // Allow references to generated code
