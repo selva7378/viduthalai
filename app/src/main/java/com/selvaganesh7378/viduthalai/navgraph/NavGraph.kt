@@ -61,9 +61,9 @@ fun ViduthalaiNavigationWrapperUI(modifier: Modifier = Modifier) {
         }
     ) {
         when (selectedDestination) {
-            ViduthalaiDestination.LockScreen -> LockScreen() // Display NavHost for PDF Scanner
-            ViduthalaiDestination.ScheduleScreen -> ScheduleScreen() // Display NavHost for OCR Scanner
-            ViduthalaiDestination.SettingsScreen -> SettingsScreen() // Display NavHost for OCR Scanner
+            ViduthalaiDestination.LockScreen -> LockScreen()
+            ViduthalaiDestination.ScheduleScreen -> ScheduleScreen()
+            ViduthalaiDestination.SettingsScreen -> SettingsScreen()
         }
     }
 }
