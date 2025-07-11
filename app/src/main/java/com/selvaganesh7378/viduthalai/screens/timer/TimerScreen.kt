@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,6 +44,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun TimerScreen(
     hours: Int,
@@ -137,8 +140,8 @@ fun TimerScreen(
                 )
             }
         } else {
-            CircularProgressIndicator(
-                progress = { progress },
+            CircularWavyProgressIndicator(
+                progress = { 1f - progress },
                 modifier = Modifier.size(200.dp)
             )
             Text(TimerService.formatTime(remainingTimeMillis))

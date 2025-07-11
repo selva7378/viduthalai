@@ -15,7 +15,7 @@ android {
         applicationId = "com.selvaganesh7378.viduthalai"
         minSdk = 24
         targetSdk = 35
-        versionCode = 6
+        versionCode = 8
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -51,7 +51,9 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
+//    implementation(libs.androidx.material3)
+    implementation("androidx.compose.material3:material3:1.4.0-alpha13")
+    implementation("androidx.compose.material:material-icons-extended:1.7.8")
     implementation(libs.androidx.work.runtime.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

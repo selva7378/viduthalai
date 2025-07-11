@@ -22,7 +22,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -212,7 +214,7 @@ fun DialExample(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ConfirmBottomSheet(
     onCancel: () -> Unit,
@@ -252,7 +254,7 @@ fun ConfirmBottomSheet(
         ) {
             Text("Locking in $timeLeft second${if (timeLeft != 1L) "s" else ""}...", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(16.dp))
-            LinearProgressIndicator(
+            LinearWavyProgressIndicator(
             progress = { progress },
             modifier = Modifier.fillMaxWidth(),
             )

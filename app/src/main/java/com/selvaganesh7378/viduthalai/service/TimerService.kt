@@ -107,13 +107,14 @@ class TimerService : Service() {
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle("Focus Timer Active")
             .setContentText("Time remaining: ${formatTime(remainingMillis)}")
-            .setSmallIcon(R.drawable.freedom_chain)
+//            .setSmallIcon(R.drawable.freedom_chain)
+            .setSmallIcon(R.drawable.ic_stat_name)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setProgress(100, progress, false)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // 🔑 Lock screen visibility
-            .setCategory(Notification.CATEGORY_PROGRESS) // Helps system classify it
+            .setCategory(Notification.CATEGORY_STOPWATCH) // Helps system classify it
             .build()
     }
 
