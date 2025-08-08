@@ -1,11 +1,7 @@
 package com.selvaganesh7378.viduthalai.screens.lock
 
-import android.app.Activity
 import android.app.admin.DevicePolicyManager
-import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -23,7 +19,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -34,142 +29,103 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.selvaganesh7378.viduthalai.TimerActivity
-import com.selvaganesh7378.viduthalai.receiver.MyDeviceAdminReceiver
-import kotlinx.coroutines.delay
-import java.util.Calendar
-
-// Define your allowed packages
-private val ALLOWED_PACKAGES = arrayOf("com.example.viduthalai", "com.example.player")
 
 @Composable
-fun LockScreen(modifier: Modifier = Modifier) {
-    var hours by rememberSaveable { mutableIntStateOf(0) }
-    var minutes by rememberSaveable { mutableIntStateOf(0) }
+fun LockScreen(
+    modifier: Modifier = Modifier,
+    viewModel: LockScreenViewModel = hiltViewModel()
+) {
+    val state by viewModel.state.collectAsState()
     val context = LocalContext.current
-    val activity = context as Activity
-    val devicePolicyManager = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-    val componentName = ComponentName(context, MyDeviceAdminReceiver::class.java)
-    var showSheet by remember { mutableStateOf(false) }
-    var showPermissionRationale by remember { mutableStateOf(false) }
-    val notificationPermission = android.Manifest.permission.POST_NOTIFICATIONS
-
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        if (isGranted) {
-            // Re-check device admin after permission
-            if (devicePolicyManager.isAdminActive(componentName)) {
-                showSheet = true
-            } else {
-                val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
-                    putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
-                    putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "App requires admin access to lock the screen.")
-                }
-                context.startActivity(intent)
-            }
-        } else {
-            Toast.makeText(context, "Notification permission denied", Toast.LENGTH_SHORT).show()
-        }
+        viewModel.onEvent(LockScreenEvent.NotificationPermissionResult(isGranted))
     }
 
-
-    DialExample(
-        onConfirm = { hr, min ->
-            hours = hr
-            minutes = min
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                when {
-                    // Notification permission granted
-                    ContextCompat.checkSelfPermission(context, notificationPermission) == PackageManager.PERMISSION_GRANTED -> {
-                        // Device Admin granted?
-                        if (devicePolicyManager.isAdminActive(componentName)) {
-                            showSheet = true // Proceed
-                        } else {
-                            // Launch admin permission prompt
-                            val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
-                                putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
-                                putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "App requires admin access to lock the screen.")
-                            }
-                            context.startActivity(intent)
-                        }
-                    }
-
-                    // Should show rationale for notifications
-                    ActivityCompat.shouldShowRequestPermissionRationale(activity, notificationPermission) -> {
-                        Toast.makeText(
-                            context,
-                            "Please allow notification permission to continue.",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-
-                    else -> {
-                        // Launch permission request
-                        notificationPermissionLauncher.launch(notificationPermission)
+    LaunchedEffect(key1 = viewModel.effect) {
+        viewModel.effect.collect { effect ->
+            when (effect) {
+                is LockScreenEffect.NavigateToTimerActivity -> {
+                    Intent(context, TimerActivity::class.java).apply {
+                        putExtra("hours", effect.hours)
+                        putExtra("minutes", effect.minutes)
+                        context.startActivity(this)
                     }
                 }
-            } else {
-                showSheet = true
-            }
-        },
-        onDismiss = { },
-        modifier = modifier.fillMaxSize()
-    )
-
-    if (showPermissionRationale) {
-        AlertDialog(
-            onDismissRequest = { showPermissionRationale = false },
-            title = { Text("Permission Required") },
-            text = { Text("This app needs notification permission to alert you when the timer completes. Please grant the permission in app settings.") },
-            confirmButton = {
-                Button(onClick = {
-                    // Open app settings
+                is LockScreenEffect.RequestAdminPermission -> {
+                    val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+                        putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, effect.componentName)
+                        putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, effect.explanation)
+                    }
+                    context.startActivity(intent)
+                }
+                is LockScreenEffect.ShowToast -> {
+                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                }
+                LockScreenEffect.RequestNotificationPermission -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                }
+                LockScreenEffect.NavigateToAppSettings -> {
                     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                         data = Uri.fromParts("package", context.packageName, null)
                     }
                     context.startActivity(intent)
-                    showPermissionRationale = false
-                }) {
+                }
+            }
+        }
+    }
+
+    DialExample(
+        onConfirm = { hr, min ->
+            viewModel.onEvent(LockScreenEvent.TimeSelected(hr, min))
+        },
+        modifier = modifier.fillMaxSize()
+    )
+
+    if (state.isPermissionRationaleVisible) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onEvent(LockScreenEvent.RationaleDialogDismissed) },
+            title = { Text("Permission Required") },
+            text = { Text("This app needs notification permission to alert you when the timer completes. Please grant the permission in app settings.") },
+            confirmButton = {
+                Button(onClick = { viewModel.onEvent(LockScreenEvent.OpenAppSettings) }) {
                     Text("Open Settings")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showPermissionRationale = false }) {
+                TextButton(onClick = { viewModel.onEvent(LockScreenEvent.RationaleDialogDismissed) }) {
                     Text("Cancel")
                 }
             }
         )
     }
 
-    if (showSheet) {
+    if (state.isConfirmationSheetVisible) {
         ConfirmBottomSheet(
-            onCancel = { showSheet = false },
-            onTimeout = {
-                showSheet = false
-                Intent(context, TimerActivity::class.java).apply {
-                    putExtra("hours", hours)
-                    putExtra("minutes", minutes)
-                    context.startActivity(this)
-                }
-            }
+            progress = state.countdownProgress,
+            timeLeft = state.countdownSeconds,
+            onCancel = { viewModel.onEvent(LockScreenEvent.CancelConfirmation) }
         )
     }
+}
+
+@Preview
+@Composable
+fun LockScreenPreview() {
+    LockScreen()
 }
 
 
@@ -177,7 +133,6 @@ fun LockScreen(modifier: Modifier = Modifier) {
 @Composable
 fun DialExample(
     onConfirm: (Int, Int) -> Unit,
-    onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val timePickerState = rememberTimePickerState(
@@ -214,33 +169,20 @@ fun DialExample(
     }
 }
 
+@Preview
+@Composable
+fun DialExamplePreview() {
+    DialExample(onConfirm = { _, _ -> })
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ConfirmBottomSheet(
+    progress: Float,
+    timeLeft: Long,
     onCancel: () -> Unit,
-    onTimeout: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var progress by remember { mutableFloatStateOf(0f) }
-    var timeLeft: Long by remember { mutableLongStateOf(5) }
-
-    LaunchedEffect(Unit) {
-        // Smooth progress update every 50ms
-        val totalMillis = 5000L
-        val frameDelay = 50L
-        val totalSteps = (totalMillis / frameDelay).toInt()
-
-        repeat(totalSteps) { step ->
-            progress = step / totalSteps.toFloat()
-            if (step % (1000 / frameDelay) == 0L) {
-                timeLeft = 5 - (step / (1000 / frameDelay))
-            }
-            delay(frameDelay)
-        }
-
-        sheetState.hide()
-        onTimeout()
-    }
 
     ModalBottomSheet(
         onDismissRequest = { onCancel() },
@@ -264,4 +206,10 @@ fun ConfirmBottomSheet(
             }
         }
     }
+}
+
+@Preview
+@Composable
+fun ConfirmBottomSheetPreview() {
+    ConfirmBottomSheet(progress = 0.5f, timeLeft = 3, onCancel = {})
 }

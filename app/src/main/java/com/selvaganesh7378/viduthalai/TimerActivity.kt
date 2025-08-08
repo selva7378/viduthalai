@@ -125,10 +125,3 @@ class TimerActivity : ComponentActivity() {
 
 }
 
-@Composable
-fun demo() {
-    Text(
-        text = "Timer Screen",
-        modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center)
-    )
-}

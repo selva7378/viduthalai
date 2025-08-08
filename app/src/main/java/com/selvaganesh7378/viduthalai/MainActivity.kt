@@ -23,7 +23,6 @@ import com.selvaganesh7378.viduthalai.model.onboardingPages
 import com.selvaganesh7378.viduthalai.ui.theme.ViduthalaiTheme
 import com.selvaganesh7378.viduthalai.navgraph.ViduthalaiNavigationWrapperUI
 import com.selvaganesh7378.viduthalai.screens.onboarding.OnBoardingScreen
-import com.selvaganesh7378.viduthalai.screens.permission.PermissionScreen
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -55,14 +54,6 @@ fun Viduthalai(modifier: Modifier = Modifier) {
     }
 
     when (isFirstLaunch) {
-//        true -> PermissionScreen(
-//            onAllPermissionsGranted = {
-//                scope.launch {
-//                    DataStoreHelper.setFirstLaunchCompleted(context)
-//                    isFirstLaunch = false // Update state to navigate to main screen
-//                }
-//            }
-//        )
         true -> OnBoardingScreen(
             onboardingPages,
             onAgree = {
@@ -95,4 +86,10 @@ fun GreetingPreview() {
     ViduthalaiTheme {
         Viduthalai()
     }
+}
+
+@Preview()
+@Composable
+fun FullScreenLoaderPreview() {
+    FullScreenLoader()
 }

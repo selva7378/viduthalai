@@ -42,6 +42,7 @@ import androidx.compose.ui.util.lerp
 import com.selvaganesh7378.viduthalai.model.OnboardingPage
 import kotlin.math.absoluteValue
 import com.airbnb.lottie.compose.*
+import com.selvaganesh7378.viduthalai.model.onboardingPages
 
 
 @Composable
@@ -173,5 +174,5 @@ fun PageContent(pageCount: Int, modifier: Modifier = Modifier) {
 @Preview
 @Composable
 fun PreviewOnBoardingScreen(modifier: Modifier = Modifier) {
-//    OnBoardingScreen()
+    OnBoardingScreen(onboardingPages, {})
 }

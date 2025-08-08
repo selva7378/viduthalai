@@ -18,7 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import com.selvaganesh7378.viduthalai.screens.lock.LockScreen
-import com.selvaganesh7378.viduthalai.screens.ScheduleScreen
+import com.selvaganesh7378.viduthalai.screens.schedule.ScheduleScreen
 import com.selvaganesh7378.viduthalai.screens.settings.SettingsScreen
 
 @Composable

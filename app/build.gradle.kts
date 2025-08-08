@@ -2,9 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-//    id("com.google.devtools.ksp")
-    id("com.google.dagger.hilt.android")
-    id("kotlin-kapt")
+    alias(libs.plugins.hilt.android.gradlePlugin) // Apply the Hilt plugin here for the module
+    alias(libs.plugins.ksp.plugin) // Apply the KSP plugin here for this module
 }
 
 android {
@@ -75,18 +74,18 @@ dependencies {
 // Optional - For coroutines support
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    // hilt dependency
-    implementation("com.google.dagger:hilt-android:2.56.2")
-    kapt("com.google.dagger:hilt-android-compiler:2.56.2")
-//    ksp("com.google.dagger:hilt-android-compiler:2.56.2")
+    //timber
+    implementation(libs.timber)
+
+    //hilt
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler) // Use 'ksp' for the compiler if using KSP
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // lottie
     implementation("com.airbnb.android:lottie-compose:6.6.6")
 
+
+
 }
 
-// Allow references to generated code
-kapt {
-    correctErrorTypes = true
-}
